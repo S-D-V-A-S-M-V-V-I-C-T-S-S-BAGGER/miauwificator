@@ -4,6 +4,7 @@ import soundfile as sf
 import numpy as np
 from math import log2, pow
 from tqdm import tqdm
+import crepe
 
 
 class FrequencyPeriod(TypedDict):
@@ -145,15 +146,18 @@ def merge(miauw_path: str, instrumental_path: str, output_path: str, start_time:
 
 
 def main():
-    start_time = 7
-    end_time = 300
-    sample_rate, audio = load_audio(start_time=start_time, end_time=end_time)
-    frequencies = get_frequencies(audio, sample_rate)
-    frequencies = group_frequencies(frequencies)
-    miauwed = create_miauws(audio.shape, sample_rate, frequencies)
-    sf.write("miauw.wav", miauwed, sample_rate, 'PCM_24')
+    # start_time = 7
+    # end_time = 300
+    # sample_rate, audio = load_audio(start_time=start_time, end_time=end_time)
+    # frequencies = get_frequencies(audio, sample_rate)
+    # frequencies = group_frequencies(frequencies)
+    # miauwed = create_miauws(audio.shape, sample_rate, frequencies)
+    # sf.write("miauw.wav", miauwed, sample_rate, 'PCM_24')
 
-    merge(miauw_path="miauw.wav", instrumental_path="instrumental.wav", output_path="merged.wav", start_time=start_time, end_time=end_time)
+    # merge(miauw_path="miauw.wav", instrumental_path="instrumental.wav", output_path="merged.wav", start_time=start_time, end_time=end_time)
+    sr, y = load_audio(end_time=16)
+    result = crepe.predict(y, sr)
+    print(result)
 
 
 if __name__ == "__main__":
