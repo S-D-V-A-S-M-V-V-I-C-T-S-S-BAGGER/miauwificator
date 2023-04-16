@@ -67,6 +67,16 @@ def get_frequencies(y: np.ndarray, sr: int) -> List[FrequencyPeriod]:
     return time_pitch
 
 
+def get_frequencies_crepe(audio: np.ndarray, sample_rate: int) -> List[FrequencyPeriod]:
+    time, frequency, confidence, activation = crepe.predict(audio, sample_rate)
+    output = []
+    for t, f, c in zip(time, frequency, confidence):
+        if c < 0.6:
+            continue
+        output.append({"frequency": f, "start_time": t, "end_time": t + 0.01, "key_step": freq_to_pitch(f)})
+    return output
+
+
 A4 = 440
 C0 = A4*pow(2, -4.75)
 name = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
@@ -90,10 +100,7 @@ def group_frequencies(
     # last_pitch = ""
     last_pitch = 0
     for frequency_period in frequencies:
-        # pitch = freq_to_pitch_name(frequency_period["frequency"])
         pitch_step = frequency_period["key_step"]
-        # print(f'{frequency_period["end_time"] - frequency_period["start_time"]=}, {pitch=},{last_pitch=}')
-        # if pitch == last_pitch:
         if abs(last_pitch - pitch_step) <= 1.5:
             grouped_frequencies[len(grouped_frequencies)-1]["end_time"] = frequency_period["end_time"]
         else:
@@ -122,9 +129,9 @@ def create_miauws(audio_shape, audio_sr, frequency_periods: List[FrequencyPeriod
         if i < len(frequency_periods) - 1:
             time_diff = frequency_periods[i + 1]["start_time"] - frequency_period["end_time"]
             if time_diff > 0.05:
-                audio_length = max(audio_length, 0.5)
+                audio_length = max(audio_length, 0.7)
             else:
-                audio_length = max(audio_length, 0.2)
+                audio_length = max(audio_length, 0.6)
         stretch_factor = miauw_length / audio_length
         steps = frequency_period["key_step"]
         pitch_shifted = librosa.effects.pitch_shift(miauw_audio, sr=miauw_sr, n_steps=steps - miauw_steps)
@@ -146,18 +153,18 @@ def merge(miauw_path: str, instrumental_path: str, output_path: str, start_time:
 
 
 def main():
-    # start_time = 7
-    # end_time = 300
-    # sample_rate, audio = load_audio(start_time=start_time, end_time=end_time)
+    input_path = "vocals-mika.wav"
+    start_time = 10
+    end_time = 20
+    sample_rate, audio = load_audio(input_path, start_time=start_time, end_time=end_time)
+    frequencies = get_frequencies_crepe(audio, sample_rate)
     # frequencies = get_frequencies(audio, sample_rate)
-    # frequencies = group_frequencies(frequencies)
-    # miauwed = create_miauws(audio.shape, sample_rate, frequencies)
-    # sf.write("miauw.wav", miauwed, sample_rate, 'PCM_24')
+    frequencies = group_frequencies(frequencies)
+    miauwed = create_miauws(audio.shape, sample_rate, frequencies)
+    sf.write("miauw.wav", miauwed, sample_rate, 'PCM_24')
 
-    # merge(miauw_path="miauw.wav", instrumental_path="instrumental.wav", output_path="merged.wav", start_time=start_time, end_time=end_time)
-    sr, y = load_audio(end_time=16)
-    result = crepe.predict(y, sr)
-    print(result)
+    merge(miauw_path="miauw.wav", instrumental_path="instrumental-mika.wav",
+          output_path="merged.wav", start_time=start_time, end_time=end_time)
 
 
 if __name__ == "__main__":
